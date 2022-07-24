@@ -1,0 +1,17 @@
+services:
+  email-canal:
+    image: 'k8scat/email-canal:latest'
+    volumes:
+      - email-canal-data:/email-canal/data
+      - ./settings.py:/opt/email-canal/settings.py
+    networks:
+      - kafka_net
+    container_name: email-canal
+
+volumes:
+  email-canal-data:
+    name: email-canal-data
+
+networks:
+  kafka_net:
+    external: true

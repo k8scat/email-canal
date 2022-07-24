@@ -1,0 +1,9 @@
+kafka
+.venv
+Dockerfile
+attachments
+Makefile
+docker-compose.yml
+.idea
+README.md
+pop3_index.txt
