@@ -5,6 +5,9 @@ ENV PROD=true \
     TZ=Asia/Shanghai
 WORKDIR /opt/email-canal
 COPY . .
-RUN pip install -U pip \
-  && pip install -r requirements.txt
+RUN apk update --no-cache \
+  && apk add --no-cache gcc musl-dev \
+  && pip install -U pip \
+  && pip install -r requirements.txt \
+  && apk del gcc musl-dev
 ENTRYPOINT ["python", "main.py"]
