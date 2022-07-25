@@ -1,3 +1,4 @@
+version: '3.7'
 services:
   email-canal:
     image: 'k8scat/email-canal:latest'
