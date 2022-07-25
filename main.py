@@ -38,7 +38,6 @@ def main():
 
                 producer.send(msg)
                 email_index += 1
-
             except Exception as e:
                 if email_not_found(e):
                     logging.info(f"Email not exists, index: {email_index}, sleep {POP3_RETR_INTERVAL} seconds...")
@@ -47,7 +46,6 @@ def main():
 
                 logging.error(e)
                 logging.error(traceback.format_exc())
-                email_index -= 1
                 break
     finally:
         with open(POP3_INDEX_FILE, "w") as f:
@@ -79,8 +77,5 @@ if __name__ == "__main__":
 
     try:
         main()
-    except Exception as e:
-        logging.error(e)
-        logging.error(traceback.format_exc())
     finally:
         producer.close()
