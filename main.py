@@ -27,13 +27,13 @@ def main():
             try:
                 m = pop3.retr(email_index)
                 if m is None:
-                    feishu.send_msg(f"Retrieve email failed, index: {i}")
+                    feishu.send_msg(f"Retrieve email failed, index: {email_index}")
                     break
 
                 try:
                     msg = json.dumps(m.__dict__).encode()
                 except Exception as e:
-                    feishu.send_msg(f"Serialize message failed: {e}, index: {i}")
+                    feishu.send_msg(f"Serialize message failed: {e}, index: {email_index}")
                     break
 
                 producer.send(msg)
@@ -44,8 +44,7 @@ def main():
                     time.sleep(POP3_RETR_INTERVAL)
                     continue
 
-                logging.error(e)
-                logging.error(traceback.format_exc())
+                feishu.send_msg(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
                 break
     finally:
         with open(POP3_INDEX_FILE, "w") as f:
