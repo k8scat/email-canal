@@ -39,11 +39,12 @@ class POP3:
 
     def __init__(self, host: str, user: str, password: str, local_attachment_dir: str,
                  port: int | None = None, enable_ssl: bool = True,
-                 oss: AliyunOSS | None = None):
+                 oss: AliyunOSS | None = None, debug_level: int = 0):
         self.host = host
         self.port = port
         self.user = user
         self.password = password
+        self.debug_level = debug_level
         if self.port is None:
             if enable_ssl:
                 self.port = poplib.POP3_PORT
@@ -54,6 +55,7 @@ class POP3:
             self.pop3 = poplib.POP3_SSL(host=self.host, port=self.port)
         else:
             self.pop3 = poplib.POP3(host=self.host, port=self.port)
+        self.pop3.set_debuglevel(self.debug_level)
 
         self.local_attachment_dir = local_attachment_dir
         self.oss = oss

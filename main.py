@@ -68,10 +68,11 @@ if __name__ == "__main__":
             ALIYUN_OSS_ENDPOINT == "":
         oss = None
     else:
-        oss = AliyunOSS(ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_ACCESS_KEY_SECRET, ALIYUN_OSS_ENDPOINT, ALIYUN_OSS_BUCKET_NAME)
+        oss = AliyunOSS(ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_ACCESS_KEY_SECRET,
+                        ALIYUN_OSS_ENDPOINT, ALIYUN_OSS_BUCKET_NAME)
 
     pop3 = POP3(host=POP3_HOST, user=POP3_USER, password=POP3_PASSWORD, local_attachment_dir=ATTACHMENTS_DIR,
-                port=POP3_PORT, enable_ssl=POP3_ENABLE_SSL, oss=oss)
+                port=POP3_PORT, enable_ssl=POP3_ENABLE_SSL, oss=oss, debug_level=POP3_DEBUG_LEVEL)
     pop3.login()
 
     producer = Producer(KAFKA_BROKER, KAFKA_TOPIC)
