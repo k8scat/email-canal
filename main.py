@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import traceback
 
 from canal.feishu import Feishu
 from canal.message import Producer
@@ -45,6 +46,7 @@ def main():
                     continue
 
                 logging.error(e)
+                logging.error(traceback.format_exc())
                 email_index -= 1
                 break
     finally:
@@ -76,5 +78,8 @@ if __name__ == "__main__":
 
     try:
         main()
+    except Exception as e:
+        logging.error(e)
+        logging.error(traceback.format_exc())
     finally:
         producer.close()

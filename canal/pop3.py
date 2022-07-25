@@ -243,8 +243,27 @@ class POP3:
 
     @staticmethod
     def decode_header_value(value) -> str:
-        return u''.join(
-            word.decode(encoding or 'utf8') if isinstance(word, bytes) else word
-            for word, encoding in decode_header(value))
+        # return u''.join(
+        #     word.decode(encoding or 'utf8') if isinstance(word, bytes) else word
+        #     for word, encoding in decode_header(value))
+
+        result = []
+        for word, encoding in decode_header(value):
+            if isinstance(word, bytes):
+                try:
+                    word = word.decode(encoding or "utf-8")
+                except UnicodeDecodeError as e:
+                    logging.warning(f"Decode header value failed: {word}")
+                    if encoding == "gb2312":
+                        try:
+                            word = word.decode('gbk')
+                        except UnicodeDecodeError:
+                            logging.warning(f"Decode header value failed: {word}")
+                            word = word.decode(encoding, errors="ignore")
+                    else:
+                        raise e
+
+            result.append(word)
+        return u''.join(result)
 
 
