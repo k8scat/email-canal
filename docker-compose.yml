@@ -6,6 +6,7 @@ services:
       - ./settings.py:/opt/email-canal/settings.py
     networks:
       - kafka_net
+    restart: always
     container_name: email-canal
 
 volumes:
