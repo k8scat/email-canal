@@ -256,7 +256,8 @@ class POP3:
                 charsets = []
                 if charset:
                     charsets.append(charset)
-                charsets.append('utf-8')
+                if charset not in ['utf-8', 'utf8']:
+                    charsets.append('utf-8')
                 charsets.append('gbk')
 
                 decode_ok = False
