@@ -250,22 +250,26 @@ class POP3:
         #     for word, encoding in decode_header(value))
 
         result = []
-        for word, encoding in decode_header(value):
-            if isinstance(word, bytes):
+        for s, charset in decode_header(value):
+            if isinstance(s, bytes):
+                encoding = charset
                 try:
-                    word = word.decode(encoding or "utf-8")
-                except UnicodeDecodeError as e:
-                    logging.warning(f"Decode header value failed: {word}")
-                    if encoding == "gb2312":
+                    s = s.decode(encoding)
+                except UnicodeDecodeError:
+                    logging.warning(f"Decode header value with {encoding} failed: {s}")
+                    try:
+                        encoding = "utf-8"
+                        logging.info(f"Try to decode header value with {encoding}")
+                        s = s.decode(encoding)
+                    except UnicodeDecodeError:
+                        logging.warning(f"Decode header value with {encoding} failed: {s}")
                         try:
-                            word = word.decode('gbk')
+                            encoding = "gbk"
+                            logging.info(f"Try to decode header value with {encoding}")
+                            s = s.decode(encoding)
                         except UnicodeDecodeError:
-                            logging.warning(f"Decode header value failed: {word}")
-                            word = word.decode(encoding, errors="ignore")
-                    else:
-                        raise e
+                            logging.warning(f"Decode header value with gbk failed: {s}")
+                            s = s.decode(charset, errors="ignore")
 
-            result.append(word)
+            result.append(s)
         return u''.join(result)
-
-
