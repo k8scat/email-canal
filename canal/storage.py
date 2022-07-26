@@ -6,7 +6,12 @@ from oss2 import SizedFileAdapter, determine_part_size, Bucket
 from oss2.models import PartInfo, GetObjectResult
 
 
-class AliyunOSS:
+class Storage:
+    def upload(self, filepath: str, key: str):
+        raise NotImplementedError()
+
+
+class AliyunOSS(Storage):
     def __init__(self, access_key_id: str, access_key_secret: str, endpoint: str, bucket_name: str):
         self.access_key_id = access_key_id
         self.access_key_secret = access_key_secret

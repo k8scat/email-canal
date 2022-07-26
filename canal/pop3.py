@@ -10,7 +10,7 @@ from email.parser import Parser
 from email.utils import parseaddr, parsedate
 from typing import Tuple, List
 
-from canal.storage import AliyunOSS
+from canal.storage import Storage
 from canal.utils import gen_attachment
 
 
@@ -39,7 +39,7 @@ class POP3:
 
     def __init__(self, host: str, user: str, password: str, local_attachment_dir: str,
                  port: int | None = None, enable_ssl: bool = True,
-                 oss: AliyunOSS | None = None, debug_level: int = 0):
+                 storage: Storage | None = None, debug_level: int = 0):
         self.host = host
         self.port = port
         self.user = user
@@ -58,7 +58,7 @@ class POP3:
         self.pop3.set_debuglevel(self.debug_level)
 
         self.local_attachment_dir = local_attachment_dir
-        self.oss = oss
+        self.storage = storage
 
     def login(self, retry: int = 3, interval: int = 3):
         # self.pop3.set_debuglevel(1)
@@ -180,9 +180,9 @@ class POP3:
         local_file = os.path.join(self.local_attachment_dir, key)
         with open(local_file, 'wb') as f:
             f.write(attachment.get_payload(decode=True))
-        if self.oss:
+        if self.storage:
             logging.info(f'Uploading attachment: {filename}, local_file: {local_file}, key: {key}')
-            self.oss.upload(local_file, key)
+            self.storage.upload(local_file, key)
         return {'oss_key': key, 'local_file': local_file, 'filename': filename, 'size': os.path.getsize(local_file)}
 
     def stat(self) -> Tuple[int, int]:
@@ -277,3 +277,11 @@ class POP3:
 
             result.append(s)
         return u''.join(result)
+
+    @staticmethod
+    def message_not_found(e: Exception) -> bool:
+        return len(e.args) == 1 and e.args[0] == b'-ERR Message not exists'
+
+    @staticmethod
+    def message_already_deleted(e: Exception) -> bool:
+        return len(e.args) == 1 and e.args[0] == b'-ERR Message already deleted'

@@ -39,9 +39,14 @@ def main():
                 producer.send(msg)
                 email_index += 1
             except Exception as e:
-                if email_not_found(e):
+                if POP3.message_not_found(e):
                     logging.info(f"Email not exists, index: {email_index}, sleep {POP3_RETR_INTERVAL} seconds...")
                     time.sleep(POP3_RETR_INTERVAL)
+                    continue
+
+                if POP3.message_already_deleted(e):
+                    logging.info(f"Email already deleted, index: {email_index}")
+                    email_index += 1
                     continue
 
                 feishu.send_msg(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
@@ -51,25 +56,20 @@ def main():
             f.write(str(email_index))
 
 
-def email_not_found(e: Exception) -> bool:
-    return len(e.args) == 1 and e.args[0] == b'-ERR Message not exists'
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
     feishu = Feishu(FEISHU_WEBHOOK)
 
-    if ALIYUN_OSS_ACCESS_KEY_ID == "" or \
-            ALIYUN_OSS_ACCESS_KEY_SECRET == "" or \
-            ALIYUN_OSS_BUCKET_NAME == "" or \
-            ALIYUN_OSS_ENDPOINT == "":
-        oss = None
-    else:
+    storage = None
+    if ALIYUN_OSS_ACCESS_KEY_ID != "" and \
+            ALIYUN_OSS_ACCESS_KEY_SECRET != "" and \
+            ALIYUN_OSS_BUCKET_NAME != "" and \
+            ALIYUN_OSS_ENDPOINT != "":
         oss = AliyunOSS(ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_ACCESS_KEY_SECRET,
                         ALIYUN_OSS_ENDPOINT, ALIYUN_OSS_BUCKET_NAME)
 
     pop3 = POP3(host=POP3_HOST, user=POP3_USER, password=POP3_PASSWORD, local_attachment_dir=ATTACHMENTS_DIR,
-                port=POP3_PORT, enable_ssl=POP3_ENABLE_SSL, oss=oss, debug_level=POP3_DEBUG_LEVEL)
+                port=POP3_PORT, enable_ssl=POP3_ENABLE_SSL, storage=storage, debug_level=POP3_DEBUG_LEVEL)
     pop3.login()
 
     producer = Producer(KAFKA_BROKER, KAFKA_TOPIC)
