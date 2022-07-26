@@ -250,8 +250,9 @@ class POP3:
         #     for word, encoding in decode_header(value))
 
         result = []
-        for s, charset in decode_header(value):
-            if isinstance(s, bytes):
+        for part, charset in decode_header(value):
+            s = part
+            if isinstance(part, bytes):
                 charsets = []
                 if charset:
                     charsets.append(charset)
@@ -262,16 +263,16 @@ class POP3:
                 for encoding in charsets:
                     try:
                         logging.info(f"Try to decode header value with {encoding}")
-                        s = s.decode(encoding)
+                        s = part.decode(encoding)
                         decode_ok = True
                         break
                     except UnicodeDecodeError:
-                        logging.warning(f"Decode header value with {encoding} failed: {s}")
+                        logging.warning(f"Decode header value with {encoding} failed: {part}")
 
                 if not decode_ok:
                     encoding = charsets[0]
                     logging.info(f"Try to decode header value with {encoding} and ignore errors")
-                    s = s.decode(encoding, errors="ignore")
+                    s = part.decode(encoding, errors="ignore")
 
             result.append(s)
         return u''.join(result)
