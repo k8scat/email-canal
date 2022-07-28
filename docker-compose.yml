@@ -4,7 +4,7 @@ services:
     image: k8scat/email-canal:latest
     volumes:
       - email-canal-attachments:/email-canal/data/attachments
-      - ./settings.py:/opt/email-canal/settings.py
+      - ./settings.py:/opt/email-canal/canal/settings.py
       - ./data/pop3_index.txt:/email-canal/data/pop3_index.txt
     networks:
       - kafka_net
