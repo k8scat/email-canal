@@ -1,18 +1,19 @@
-version: '3.7'
+version: "3.7"
 services:
   email-canal:
-    image: 'k8scat/email-canal:latest'
+    image: k8scat/email-canal:latest
     volumes:
-      - email-canal-data:/email-canal/data
+      - email-canal-attachments:/email-canal/data/attachments
       - ./settings.py:/opt/email-canal/settings.py
+      - ./data/pop3_index.txt:/email-canal/data/pop3_index.txt
     networks:
       - kafka_net
     restart: always
     container_name: email-canal
 
 volumes:
-  email-canal-data:
-    name: email-canal-data
+  email-canal-attachments:
+    name: email-canal-attachments
 
 networks:
   kafka_net:

@@ -1,7 +1,6 @@
 __pycache__/
 .venv/
-kafka/logs/
-attachments/
-pop3_index.txt
 settings_prod.py
-.idea
+settings_dev.py
+.idea/
+data/

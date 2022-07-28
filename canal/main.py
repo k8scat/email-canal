@@ -3,10 +3,10 @@ import logging
 import time
 import traceback
 
-from canal.feishu import Feishu
-from canal.message import Producer
-from canal.pop3 import POP3
-from canal.storage import AliyunOSS
+from utils import Feishu
+from message import Producer
+from pop3 import POP3
+from storage import AliyunOSS
 from settings import *
 
 
@@ -61,20 +61,17 @@ if __name__ == "__main__":
     feishu = Feishu(FEISHU_WEBHOOK)
 
     storage = None
-    if ALIYUN_OSS_ACCESS_KEY_ID != "" and \
-            ALIYUN_OSS_ACCESS_KEY_SECRET != "" and \
-            ALIYUN_OSS_BUCKET_NAME != "" and \
-            ALIYUN_OSS_ENDPOINT != "":
-        oss = AliyunOSS(ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_ACCESS_KEY_SECRET,
-                        ALIYUN_OSS_ENDPOINT, ALIYUN_OSS_BUCKET_NAME)
+    if ENABLE_ALIYUN_OSS:
+        storage = AliyunOSS(ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_ACCESS_KEY_SECRET,
+                            ALIYUN_OSS_ENDPOINT, ALIYUN_OSS_BUCKET_NAME)
 
     pop3 = POP3(host=POP3_HOST, user=POP3_USER, password=POP3_PASSWORD, local_attachment_dir=ATTACHMENTS_DIR,
                 port=POP3_PORT, enable_ssl=POP3_ENABLE_SSL, storage=storage, debug_level=POP3_DEBUG_LEVEL)
     pop3.login()
 
-    producer = Producer(KAFKA_BROKER, KAFKA_TOPIC)
-
+    producer = Producer(broker=KAFKA_BROKER, topic=KAFKA_TOPIC)
     try:
         main()
     finally:
         producer.close()
+        pop3.quit()

@@ -61,7 +61,6 @@ class POP3:
         self.storage = storage
 
     def login(self, retry: int = 3, interval: int = 3):
-        # self.pop3.set_debuglevel(1)
         self.pop3.user(self.user)
 
         # pop3_server login retry: poplib.error_proto: b'-ERR login fail, please try again later'
@@ -74,6 +73,9 @@ class POP3:
                     raise Exception(f'pop3 server login failed: {e}')
                 logging.warning(f'pop3 server login failed: {e}')
                 time.sleep(interval)
+
+    def quit(self):
+        self.pop3.quit()
 
     @staticmethod
     def guess_charset(msg: Message) -> str:
@@ -162,9 +164,10 @@ class POP3:
                         continue
                     attachment = gen_attachment(part.get_payload(decode=True), content_disposition=content_disposition)
                     att = self.save_attachment(attachment)
-                    attachments.append(att)
+                    if att:
+                        attachments.append(att)
                 else:
-                    logging.debug(f'Ignored content_type: {content_type}')
+                    logging.info(f'Ignored content_type: {content_type}')
         if len(attachments) > 0:
             email.attachments = attachments
         return email
@@ -180,10 +183,18 @@ class POP3:
         local_file = os.path.join(self.local_attachment_dir, key)
         with open(local_file, 'wb') as f:
             f.write(attachment.get_payload(decode=True))
+
+        data = {
+            'oss_key': key,
+            'local_file': local_file,
+            'filename': filename,
+            'size': os.path.getsize(local_file)
+        }
         if self.storage:
             logging.info(f'Uploading attachment: {filename}, local_file: {local_file}, key: {key}')
             self.storage.upload(local_file, key)
-        return {'oss_key': key, 'local_file': local_file, 'filename': filename, 'size': os.path.getsize(local_file)}
+            data['oss_key'] = key
+        return data
 
     def stat(self) -> Tuple[int, int]:
         msg_count, mailbox_size = self.pop3.stat()

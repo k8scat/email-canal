@@ -7,9 +7,8 @@
 ### 运行 Kafka
 
 ```bash
-cd kafka
 docker network create kafka_net
-docker compose up -d
+docker compose -f deploy/kafka up -d
 ```
 
 ### 运行 email-canal
@@ -22,7 +21,7 @@ docker compose up -d
 
 ## Author
 
-K8sCat <k8scat@gmail.com>
+[K8sCat](https://github.com/k8scat)
 
 ## License
 
