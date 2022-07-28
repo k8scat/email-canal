@@ -10,8 +10,7 @@ from email.parser import Parser
 from email.utils import parseaddr, parsedate
 from typing import Tuple, List
 
-from canal.storage import Storage
-from canal.utils import gen_attachment
+from canal.storage.storage import Storage
 
 
 class Email:
@@ -185,14 +184,13 @@ class POP3:
             f.write(attachment.get_payload(decode=True))
 
         data = {
-            'oss_key': key,
             'local_file': local_file,
             'filename': filename,
             'size': os.path.getsize(local_file)
         }
         if self.storage:
             logging.info(f'Uploading attachment: {filename}, local_file: {local_file}, key: {key}')
-            self.storage.upload(local_file, key)
+            self.storage.upload(filepath=local_file, key=key)
             data['oss_key'] = key
         return data
 
@@ -296,3 +294,13 @@ class POP3:
     @staticmethod
     def message_already_deleted(e: Exception) -> bool:
         return len(e.args) == 1 and e.args[0] == b'-ERR Message already deleted'
+
+
+def gen_attachment(content: bytes | str, filename: str = '', content_disposition: str = '') -> MIMEApplication:
+    attachment = MIMEApplication(content, Name=filename)
+    if content_disposition:
+        attachment['Content-Disposition'] = content_disposition
+    else:
+        attachment.add_header('Content-Disposition',
+                              'attachment', filename=filename)
+    return attachment

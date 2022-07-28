@@ -2,6 +2,7 @@ import os
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
+LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 KAFKA_BROKER = "localhost:9092"
 KAFKA_TOPIC = "email"
@@ -28,5 +29,4 @@ ATTACHMENTS_DIR = os.path.join(DATA_DIR, "attachments")
 if not os.path.isdir(ATTACHMENTS_DIR):
     os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
 
-# 飞书通知
-FEISHU_WEBHOOK = ""
+LOG_FILE = os.path.join(LOGS_DIR, "email-canal.log")

@@ -1,6 +1,6 @@
-__pycache__/
-.venv/
-settings_prod.py
-settings_dev.py
-.idea/
-data/
+__pycache__
+.venv
+settings_*.py
+.idea
+data
+logs

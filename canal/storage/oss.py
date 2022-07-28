@@ -2,16 +2,15 @@ import logging
 import os
 
 import oss2
-from oss2 import SizedFileAdapter, determine_part_size, Bucket
+from oss2 import Bucket, SizedFileAdapter, determine_part_size
 from oss2.models import PartInfo, GetObjectResult
 
-
-class Storage:
-    def upload(self, filepath: str, key: str):
-        raise NotImplementedError()
+from canal.storage.storage import Storage
 
 
 class AliyunOSS(Storage):
+    preferred_size = 1000 * 1024
+
     def __init__(self, access_key_id: str, access_key_secret: str, endpoint: str, bucket_name: str):
         self.access_key_id = access_key_id
         self.access_key_secret = access_key_secret
@@ -19,20 +18,21 @@ class AliyunOSS(Storage):
         self.bucket_name = bucket_name
         self.bucket = self._get_bucket()
 
-        self.preferred_size = 1000 * 1024
-
     def _get_bucket(self) -> Bucket:
         # 阿里云主账号AccessKey拥有所有API的访问权限，风险很高。强烈建议您创建并使用RAM账号进行API访问或日常运维，请登录 https://ram.console.aliyun.com 创建RAM账号。
         auth = oss2.Auth(self.access_key_id, self.access_key_secret)
         # Endpoint以杭州为例，其它Region请按实际情况填写。
         return oss2.Bucket(auth, self.endpoint, self.bucket_name)
 
-    def upload(self, filepath: str, key: str):
+    def upload(self, *args, **kwargs):
         """
         分片上传
 
         参考：https://help.aliyun.com/document_detail/88434.html?spm=a2c4g.11186623.6.849.de955fffeknceQ
         """
+        filepath = kwargs.get("filepath", "")
+        key = kwargs.get("key", "")
+
         # 初始化分片。
         # 如果需要在初始化分片时设置文件存储类型，请在init_multipart_upload中设置相关headers，参考如下。
         # headers = dict()
@@ -46,7 +46,7 @@ class AliyunOSS(Storage):
         part_size = determine_part_size(total_size, preferred_size=self.preferred_size)
 
         # 逐个上传分片。
-        with open(filepath, 'rb') as f:
+        with open(filepath, "rb") as f:
             part_number = 1
             offset = 0
             while offset < total_size:
@@ -88,4 +88,4 @@ class AliyunOSS(Storage):
 
         参考: https://help.aliyun.com/document_detail/32033.html?spm=a2c4g.11186623.6.881.603f16950kd10U
         """
-        return self.bucket.sign_url('GET', key, expire)
+        return self.bucket.sign_url("GET", key, expire)

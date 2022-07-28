@@ -1,12 +1,12 @@
 import json
 import logging
+import sys
 import time
 import traceback
 
-from utils import Feishu
-from message import Producer
+from kafka_producer import Producer
 from pop3 import POP3
-from storage import AliyunOSS
+from storage.oss import AliyunOSS
 from settings import *
 
 
@@ -27,13 +27,13 @@ def main():
             try:
                 m = pop3.retr(email_index)
                 if m is None:
-                    feishu.send_msg(f"Retrieve email failed, index: {email_index}")
+                    logging.error(f"Retrieve email failed, index: {email_index}")
                     break
 
                 try:
                     msg = json.dumps(m.__dict__).encode()
                 except Exception as e:
-                    feishu.send_msg(f"Serialize message failed: {e}, index: {email_index}")
+                    logging.error(f"Serialize message failed: {e}, index: {email_index}")
                     break
 
                 producer.send(msg)
@@ -49,7 +49,7 @@ def main():
                     email_index += 1
                     continue
 
-                feishu.send_msg(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
+                logging.error(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
                 break
     finally:
         with open(POP3_INDEX_FILE, "w") as f:
@@ -57,8 +57,14 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
-    feishu = Feishu(FEISHU_WEBHOOK)
+    handlers = [
+        logging.StreamHandler(stream=sys.stdout),
+    ]
+    if LOG_FILE:
+        handlers.append(logging.FileHandler(LOG_FILE, encoding="utf-8"))
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s",
+                        handlers=handlers)
 
     storage = None
     if ENABLE_ALIYUN_OSS:
