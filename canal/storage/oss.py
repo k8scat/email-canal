@@ -7,6 +7,8 @@ from oss2.models import PartInfo, GetObjectResult
 
 from canal.storage.storage import Storage
 
+log = logging.getLogger(__name__)
+
 
 class AliyunOSS(Storage):
     preferred_size = 1000 * 1024
@@ -56,7 +58,7 @@ class AliyunOSS(Storage):
                 parts.append(PartInfo(part_number, result.etag))
                 offset += num_to_upload
                 part_number += 1
-                logging.debug(f"Upload progress: {offset / total_size * 100}%")
+                log.debug(f"Upload progress: {offset / total_size * 100}%")
 
             # 完成分片上传。
             # 如果需要在完成分片上传时设置文件访问权限ACL，请在complete_multipart_upload函数中设置相关headers，参考如下。

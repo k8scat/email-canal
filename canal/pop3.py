@@ -12,6 +12,8 @@ from typing import Tuple, List
 
 from canal.storage.storage import Storage
 
+log = logging.getLogger(__name__)
+
 
 class Email:
     def __init__(self, subject: str, from_addr: Tuple[str, str], to_addr: Tuple[str, str],
@@ -70,7 +72,7 @@ class POP3:
             except Exception as e:
                 if count == retry - 1:
                     raise Exception(f'pop3 server login failed: {e}')
-                logging.warning(f'pop3 server login failed: {e}')
+                log.warning(f'pop3 server login failed: {e}')
                 time.sleep(interval)
 
     def quit(self):
@@ -98,7 +100,7 @@ class POP3:
     def parse_email_header(msg: Message, header: str) -> Tuple[str, str]:
         header = header.lower()
         if header not in ['subject', 'from', 'to', 'date']:
-            logging.warning(f'Invalid header: {header}')
+            log.warning(f'Invalid header: {header}')
             return '', ''
 
         value = msg.get(header, '')
@@ -138,7 +140,7 @@ class POP3:
         date = POP3.parse_date(msg)
         email = Email(subject=subject, from_addr=from_addr, to_addr=to_addr, date=date)
 
-        logging.info(f'Parsing email: {subject}')
+        log.info(f'Parsing email: {subject}')
 
         parts = [msg]
         if msg.is_multipart():
@@ -152,21 +154,21 @@ class POP3:
             elif content_type == 'text/html':
                 email.html_content = POP3.parse_email_content(part)
             else:
-                logging.info(f'Found content_type: {content_type}')
+                log.info(f'Found content_type: {content_type}')
                 content_disposition = part.get('Content-Disposition', '').strip()
                 content_disposition = POP3.decode_header_value(content_disposition)
                 if content_disposition.startswith('attachment;'):
-                    logging.info(f'Found attachment: {content_disposition}')
+                    log.info(f'Found attachment: {content_disposition}')
                     content = part.get_payload(decode=True)
                     if content is None:
-                        logging.warning(f'Attachment content is empty')
+                        log.warning(f'Attachment content is empty')
                         continue
                     attachment = gen_attachment(part.get_payload(decode=True), content_disposition=content_disposition)
                     att = self.save_attachment(attachment)
                     if att:
                         attachments.append(att)
                 else:
-                    logging.info(f'Ignored content_type: {content_type}')
+                    log.info(f'Ignored content_type: {content_type}')
         if len(attachments) > 0:
             email.attachments = attachments
         return email
@@ -174,7 +176,7 @@ class POP3:
     def save_attachment(self, attachment: MIMEApplication) -> dict | None:
         filename = attachment.get_filename()
         if not filename:
-            logging.warning('Attachment has no filename')
+            log.warning('Attachment has no filename')
             return None
 
         ext = os.path.splitext(filename)[1]
@@ -189,7 +191,7 @@ class POP3:
             'size': os.path.getsize(local_file)
         }
         if self.storage:
-            logging.info(f'Uploading attachment: {filename}, local_file: {local_file}, key: {key}')
+            log.info(f'Uploading attachment: {filename}, local_file: {local_file}, key: {key}')
             self.storage.upload(filepath=local_file, key=key)
             data['oss_key'] = key
         return data
@@ -213,15 +215,15 @@ class POP3:
         resp, lines, octets = self.pop3.retr(index)
 
         if not resp.startswith(self.status_ok):
-            logging.error(f'Invalid resp: {resp}')
+            log.error(f'Invalid resp: {resp}')
             return None
-        logging.info(f'Email size: {octets}')
+        log.info(f'Email size: {octets}')
 
         try:
             msg_content = b'\r\n'.join(lines).decode('utf-8')
         except Exception as e:
-            logging.warning(f'Decode message with utf-8 failed: {e}')
-            logging.info('Try to find message charset...')
+            log.warning(f'Decode message with utf-8 failed: {e}')
+            log.info('Try to find message charset...')
             charset = ''
             for line in lines:
                 if b'Content-Type: ' in line:
@@ -234,15 +236,15 @@ class POP3:
                 if charset:
                     break
             if charset == '':
-                logging.warning('Message charset not found and use utf-8')
+                log.warning('Message charset not found and use utf-8')
                 charset = 'utf-8'
             else:
-                logging.info(f'Found message charset: {charset}')
+                log.info(f'Found message charset: {charset}')
 
             try:
                 msg_content = b'\r\n'.join(lines).decode(charset, errors='ignore')
             except Exception as e:
-                logging.error(f'Decode message failed: {e}')
+                log.error(f'Decode message failed: {e}')
                 return None
 
         msg = Parser().parsestr(msg_content)
@@ -272,16 +274,16 @@ class POP3:
                 decode_ok = False
                 for encoding in charsets:
                     try:
-                        logging.info(f"Try to decode header value with {encoding}")
+                        log.info(f"Try to decode header value with {encoding}")
                         s = part.decode(encoding)
                         decode_ok = True
                         break
                     except UnicodeDecodeError:
-                        logging.warning(f"Decode header value with {encoding} failed: {part}")
+                        log.warning(f"Decode header value with {encoding} failed: {part}")
 
                 if not decode_ok:
                     encoding = charsets[0]
-                    logging.info(f"Try to decode header value with {encoding} and ignore errors")
+                    log.info(f"Try to decode header value with {encoding} and ignore errors")
                     s = part.decode(encoding, errors="ignore")
 
             result.append(s)

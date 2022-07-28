@@ -1,5 +1,4 @@
 import json
-import logging
 import sys
 import time
 import traceback
@@ -9,47 +8,58 @@ from pop3 import POP3
 from storage.oss import AliyunOSS
 from settings import *
 
+handlers = [
+    logging.StreamHandler(stream=sys.stdout),
+]
+if LOG_FILE:
+    handlers.append(logging.FileHandler(LOG_FILE, encoding="utf-8"))
+
+logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(levelname)s: %(message)s",
+                    handlers=handlers)
+
+log = logging.getLogger(__name__)
+
 
 def main():
     msg_count = pop3.count()
-    logging.info(f"Email count: {msg_count}")
+    log.info(f"Email count: {msg_count}")
     email_index = 1
     if os.path.isfile(POP3_INDEX_FILE):
         try:
             with open(POP3_INDEX_FILE) as f:
                 email_index = int(f.read().strip())
         except Exception as e:
-            logging.warning(f"Read email index failed: {e}, use default index: {email_index}")
+            log.warning(f"Read email index failed: {e}, use default index: {email_index}")
 
     try:
         while True:
-            logging.info(f"Retrieve email index: {email_index}")
+            log.info(f"Retrieve email index: {email_index}")
             try:
                 m = pop3.retr(email_index)
                 if m is None:
-                    logging.error(f"Retrieve email failed, index: {email_index}")
+                    log.error(f"Retrieve email failed, index: {email_index}")
                     break
 
                 try:
                     msg = json.dumps(m.__dict__).encode()
                 except Exception as e:
-                    logging.error(f"Serialize message failed: {e}, index: {email_index}")
+                    log.error(f"Serialize message failed: {e}, index: {email_index}")
                     break
 
                 producer.send(msg)
                 email_index += 1
             except Exception as e:
                 if POP3.message_not_found(e):
-                    logging.info(f"Email not exists, index: {email_index}, sleep {POP3_RETR_INTERVAL} seconds...")
+                    log.info(f"Email not exists, index: {email_index}, sleep {POP3_RETR_INTERVAL} seconds...")
                     time.sleep(POP3_RETR_INTERVAL)
                     continue
 
                 if POP3.message_already_deleted(e):
-                    logging.info(f"Email already deleted, index: {email_index}")
+                    log.info(f"Email already deleted, index: {email_index}")
                     email_index += 1
                     continue
 
-                logging.error(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
+                log.error(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
                 break
     finally:
         with open(POP3_INDEX_FILE, "w") as f:
@@ -57,15 +67,6 @@ def main():
 
 
 if __name__ == "__main__":
-    handlers = [
-        logging.StreamHandler(stream=sys.stdout),
-    ]
-    if LOG_FILE:
-        handlers.append(logging.FileHandler(LOG_FILE, encoding="utf-8"))
-
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s",
-                        handlers=handlers)
-
     storage = None
     if ENABLE_ALIYUN_OSS:
         storage = AliyunOSS(ALIYUN_OSS_ACCESS_KEY_ID, ALIYUN_OSS_ACCESS_KEY_SECRET,

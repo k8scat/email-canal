@@ -1,3 +1,4 @@
+import logging
 import os
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,4 +30,5 @@ ATTACHMENTS_DIR = os.path.join(DATA_DIR, "attachments")
 if not os.path.isdir(ATTACHMENTS_DIR):
     os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
 
+LOG_LEVEL = logging.INFO
 LOG_FILE = os.path.join(LOGS_DIR, "email-canal.log")
