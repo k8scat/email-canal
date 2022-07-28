@@ -13,7 +13,7 @@ docker compose -f deploy/kafka up -d
 
 ### 运行 email-canal
 
-编辑 `settings.py` 文件，主要修改 `POP3`、`阿里云 OSS` 和 `飞书告警` 的配置，其他配置保持默认即可。
+编辑 [canal/settings.py](./canal/settings.py) 文件，主要修改 `POP3`、`阿里云 OSS` 和 `飞书告警` 的配置，其他配置保持默认即可。
 
 ```bash
 docker compose up -d
