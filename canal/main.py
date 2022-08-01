@@ -39,7 +39,6 @@ def main():
 
     try:
         while True:
-            log.info(f"Retrieve email index: {email_index}")
             try:
                 m = pop3.retr(email_index)
                 if m is None:

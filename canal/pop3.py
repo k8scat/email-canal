@@ -106,6 +106,16 @@ class POP3:
             content = content.decode(charset, errors="ignore")
         return content
 
+    @staticmethod
+    def get_payloads(msg: Message) -> list[Message]:
+        payloads = []
+        if msg.is_multipart():
+            for payload in msg.get_payload():
+                payloads.extend(POP3.get_payloads(payload))
+        else:
+            payloads.append(msg)
+        return payloads
+
     def parse_email(self, msg: Message) -> dict:
         headers = []
         subject = ""
@@ -119,9 +129,7 @@ class POP3:
             "headers": headers,
         }
 
-        payloads = [msg]
-        if msg.is_multipart():
-            payloads = msg.get_payload()
+        payloads = POP3.get_payloads(msg)
         attachments = []
         convert_payloads = []
         for payload in payloads:
@@ -179,6 +187,7 @@ class POP3:
         return count
 
     def retr(self, index: int) -> dict | None:
+        log.info(f"Retrieve email index: {index}")
         resp, lines, octets = self.client.retr(index)
         if not resp.startswith(self.status_ok):
             log.error(f"Retrieve email failed: {resp}")
