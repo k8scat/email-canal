@@ -6,7 +6,7 @@ import traceback
 from canal.storage.local import LocalStorage
 from kafka_producer import Producer
 from pop3 import POP3
-from settings_dev import *
+from settings import *
 from storage.oss import AliyunOSS
 
 handlers = [
