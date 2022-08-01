@@ -5,12 +5,14 @@ import time
 import uuid
 from email.header import decode_header
 from email.message import Message
-from email.mime.application import MIMEApplication
 from email.parser import Parser
 from email.utils import parseaddr, parsedate
 from typing import Tuple, List
 
+from canal.storage.local import LocalStorage
+from canal.storage.oss import AliyunOSS
 from canal.storage.storage import Storage
+from canal.utils import sha256
 
 log = logging.getLogger(__name__)
 
@@ -36,11 +38,10 @@ class POP3:
     poplib._MAXLINE = 1024 * 1024
 
     status_ok = b'+OK'
-    pop3 = None
 
-    def __init__(self, host: str, user: str, password: str, local_attachment_dir: str,
-                 port: int | None = None, enable_ssl: bool = True,
-                 storage: Storage | None = None, debug_level: int = 0):
+    def __init__(self, host: str, user: str, password: str, port: int | None = None,
+                 enable_ssl: bool = True, debug_level: int = 0,
+                 storages: list[Storage] | None = None):
         self.host = host
         self.port = port
         self.user = user
@@ -53,60 +54,40 @@ class POP3:
                 self.port = poplib.POP3_SSL_PORT
 
         if enable_ssl:
-            self.pop3 = poplib.POP3_SSL(host=self.host, port=self.port)
+            self.client = poplib.POP3_SSL(host=self.host, port=self.port)
         else:
-            self.pop3 = poplib.POP3(host=self.host, port=self.port)
-        self.pop3.set_debuglevel(self.debug_level)
-
-        self.local_attachment_dir = local_attachment_dir
-        self.storage = storage
+            self.client = poplib.POP3(host=self.host, port=self.port)
+        self.client.set_debuglevel(self.debug_level)
+        self.storages = storages
 
     def login(self, retry: int = 3, interval: int = 3):
-        self.pop3.user(self.user)
+        self.client.user(self.user)
 
         # pop3_server login retry: poplib.error_proto: b'-ERR login fail, please try again later'
         for count in range(retry):
             try:
-                self.pop3.pass_(self.password)
+                self.client.pass_(self.password)
                 break
             except Exception as e:
                 if count == retry - 1:
-                    raise Exception(f'pop3 server login failed: {e}')
-                log.warning(f'pop3 server login failed: {e}')
+                    raise Exception(f'POP3 login failed: {e}')
+                log.warning(f'POP3 login failed: {e}')
                 time.sleep(interval)
 
     def quit(self):
-        self.pop3.quit()
+        self.client.quit()
 
     @staticmethod
-    def guess_charset(msg: Message) -> str:
-        charset = msg.get_charset()
-        if charset is None:
-            # text/plain; charset="utf-8"
-            # text/plain; charset="utf-8"; format=flowed
-            # text/plain; charset = "gbk"
-            content_type = msg.get('Content-Type', '').lower().replace(' ', '')
-            for part in content_type.split(';'):
-                if 'charset' in part:
-                    pos = part.find('charset=')
-                    charset = part[pos + 8:].strip()
-                    break
-
-            if charset is None:
-                charset = 'utf-8'
-        return charset
-
-    @staticmethod
-    def parse_email_header(msg: Message, header: str) -> Tuple[str, str]:
+    def get_email_header(msg: Message, header: str) -> Tuple[str, str]:
         header = header.lower()
-        if header not in ['subject', 'from', 'to', 'date']:
-            log.warning(f'Invalid header: {header}')
-            return '', ''
+        if header not in ["subject", "from", "to", "date"]:
+            log.warning(f"Invalid header: {header}")
+            return "", ""
 
-        value = msg.get(header, '')
+        value = msg.get(header, None)
         if not value:
-            return '', ''
-        if header in ['subject', 'date']:
+            return "", ""
+        if header in ["subject", "date"]:
             return POP3.decode_header_value(value), ''
 
         name, email = parseaddr(value)
@@ -114,144 +95,128 @@ class POP3:
         return name, email
 
     @staticmethod
-    def parse_subject(msg: Message) -> str:
-        return POP3.parse_email_header(msg, 'Subject')[0]
+    def get_subject(msg: Message) -> str:
+        return POP3.get_email_header(msg, "subject")[0]
 
     @staticmethod
-    def parse_date(msg: Message) -> float | None:
-        date = POP3.parse_email_header(msg, 'Date')[0]
-        d = parsedate(date)
-        if d is None:
-            return None
-        return time.mktime(d)
-
-    @staticmethod
-    def parse_email_content(msg: Message) -> str:
+    def get_content(msg: Message) -> str:
         content = msg.get_payload(decode=True)
-        charset = POP3.guess_charset(msg)
+        charset = msg.get_content_charset(failobj="utf-8")
         if charset:
-            content = content.decode(charset, errors='ignore')
+            content = content.decode(charset, errors="ignore")
         return content
 
-    def parse_email(self, msg: Message) -> Email:
-        subject = POP3.parse_subject(msg)
-        from_addr = POP3.parse_email_header(msg, 'From')
-        to_addr = POP3.parse_email_header(msg, 'To')
-        date = POP3.parse_date(msg)
-        email = Email(subject=subject, from_addr=from_addr, to_addr=to_addr, date=date)
+    def parse_email(self, msg: Message) -> dict:
+        headers = []
+        subject = ""
+        for k, v in msg.items():
+            v = POP3.decode_header_value(v)
+            headers.append((k, v))
+            if k.lower() == "subject":
+                subject = v
+        log.info(f"Email subject: {subject}")
+        email = {
+            "headers": headers,
+        }
 
-        log.info(f'Parsing email: {subject}')
-
-        parts = [msg]
+        payloads = [msg]
         if msg.is_multipart():
-            parts = msg.get_payload()
-
+            payloads = msg.get_payload()
         attachments = []
-        for part in parts:
-            content_type = part.get_content_type()
-            if content_type == 'text/plain':
-                email.plain_content = POP3.parse_email_content(part)
-            elif content_type == 'text/html':
-                email.html_content = POP3.parse_email_content(part)
+        convert_payloads = []
+        for payload in payloads:
+            content_disposition = payload.get_content_disposition()
+            if content_disposition == "attachment":
+                p = payload.get_payload(decode=True)
+                if not isinstance(p, bytes):
+                    logging.warning(f"Payload is not bytes: {type(p)}")
+                    continue
+
+                filename = POP3.decode_header_value(payload.get_filename())
+                if not filename:
+                    logging.warning("Empty filename")
+                    continue
+                att = self.save_attachment(filename=filename, content=p)
+                if att:
+                    attachments.append(att)
             else:
-                log.info(f'Found content_type: {content_type}')
-                content_disposition = part.get('Content-Disposition', '').strip()
-                content_disposition = POP3.decode_header_value(content_disposition)
-                if content_disposition.startswith('attachment;'):
-                    log.info(f'Found attachment: {content_disposition}')
-                    content = part.get_payload(decode=True)
-                    if content is None:
-                        log.warning(f'Attachment content is empty')
-                        continue
-                    attachment = gen_attachment(part.get_payload(decode=True), content_disposition=content_disposition)
-                    att = self.save_attachment(attachment)
-                    if att:
-                        attachments.append(att)
-                else:
-                    log.info(f'Ignored content_type: {content_type}')
+                headers = []
+                for k, v in payload.items():
+                    v = POP3.decode_header_value(v)
+                    headers.append((k, v))
+                p = {
+                    "headers": headers,
+                    "payload": payload.get_payload(),
+                }
+                convert_payloads.append(p)
         if len(attachments) > 0:
-            email.attachments = attachments
+            email["attachments"] = attachments
+        if len(convert_payloads) > 0:
+            email["payloads"] = convert_payloads
         return email
 
-    def save_attachment(self, attachment: MIMEApplication) -> dict | None:
-        filename = attachment.get_filename()
-        if not filename:
-            log.warning('Attachment has no filename')
-            return None
+    def save_attachment(self, filename: str, content: bytes) -> dict:
+        data = {
+            "name": filename,
+            "hash": sha256(content),
+            "size": len(content),
+        }
+        if len(self.storages) == 0:
+            return data
 
         ext = os.path.splitext(filename)[1]
-        key = f'{str(uuid.uuid4())}{ext}'
-        local_file = os.path.join(self.local_attachment_dir, key)
-        with open(local_file, 'wb') as f:
-            f.write(attachment.get_payload(decode=True))
-
-        data = {
-            'local_file': local_file,
-            'filename': filename,
-            'size': os.path.getsize(local_file)
-        }
-        if self.storage:
-            log.info(f'Uploading attachment: {filename}, local_file: {local_file}, key: {key}')
-            self.storage.upload(filepath=local_file, key=key)
-            data['oss_key'] = key
+        key = f"{str(uuid.uuid4())}{ext}"
+        data["key"] = key
+        for s in self.storages:
+            if isinstance(s, LocalStorage):
+                s.upload(key=key, content=content)
+            elif isinstance(s, AliyunOSS):
+                s.upload(key=key, content=content)
         return data
 
-    def stat(self) -> Tuple[int, int]:
-        msg_count, mailbox_size = self.pop3.stat()
-        return msg_count, mailbox_size
-
     def count(self) -> int:
-        count, _ = self.stat()
+        count, _ = self.client.stat()
         return count
 
-    def list(self) -> List:
-        # emails: [b'1 82923', b'2 2184', ...]
-        resp, emails, _ = self.pop3.list()
+    def retr(self, index: int) -> dict | None:
+        resp, lines, octets = self.client.retr(index)
         if not resp.startswith(self.status_ok):
-            raise Exception('List failed', str(resp))
-        return emails
-
-    def retr(self, index: int) -> Email | None:
-        resp, lines, octets = self.pop3.retr(index)
-
-        if not resp.startswith(self.status_ok):
-            log.error(f'Invalid resp: {resp}')
+            log.error(f"Retrieve email failed: {resp}")
             return None
-        log.info(f'Email size: {octets}')
+        log.info(f"Email size: {octets}")
 
+        msg_content_bytes = b"\r\n".join(lines)
         try:
-            msg_content = b'\r\n'.join(lines).decode('utf-8')
+            msg_content = msg_content_bytes.decode("utf-8")
         except Exception as e:
-            log.warning(f'Decode message with utf-8 failed: {e}')
-            log.info('Try to find message charset...')
-            charset = ''
+            log.warning(f"Decode message with utf-8 failed: {e}")
+            log.info("Try to find message charset...")
+            charset = ""
             for line in lines:
-                if b'Content-Type: ' in line:
-                    line = line.decode('utf-8').lower()
-                    for part in line.split(';'):
-                        if 'charset' in part:
-                            pos = part.find('charset=')
+                if b"Content-Type: " in line:
+                    line = line.decode("utf-8").lower()
+                    for part in line.split(";"):
+                        if "charset" in part:
+                            pos = part.find("charset=")
                             charset = part[pos + 8:].strip()
                             break
                 if charset:
                     break
-            if charset == '':
-                log.warning('Message charset not found and use utf-8')
-                charset = 'utf-8'
+            if charset == "":
+                log.warning("Message charset not found and use utf-8")
+                charset = "utf-8"
             else:
-                log.info(f'Found message charset: {charset}')
+                log.info(f"Found message charset: {charset}")
 
             try:
-                msg_content = b'\r\n'.join(lines).decode(charset, errors='ignore')
+                msg_content = msg_content_bytes.decode(charset, errors="ignore")
             except Exception as e:
-                log.error(f'Decode message failed: {e}')
+                log.error(f"Decode message failed: {e}")
                 return None
 
         msg = Parser().parsestr(msg_content)
         email = self.parse_email(msg)
-        email.size = octets
-        email.raw = msg_content
-        email.index = index
+        email["index"] = index
         return email
 
     @staticmethod
@@ -290,19 +255,9 @@ class POP3:
         return u''.join(result)
 
     @staticmethod
-    def message_not_found(e: Exception) -> bool:
+    def is_not_found(e: Exception) -> bool:
         return len(e.args) == 1 and e.args[0] == b'-ERR Message not exists'
 
     @staticmethod
-    def message_already_deleted(e: Exception) -> bool:
+    def is_deleted(e: Exception) -> bool:
         return len(e.args) == 1 and e.args[0] == b'-ERR Message already deleted'
-
-
-def gen_attachment(content: bytes | str, filename: str = '', content_disposition: str = '') -> MIMEApplication:
-    attachment = MIMEApplication(content, Name=filename)
-    if content_disposition:
-        attachment['Content-Disposition'] = content_disposition
-    else:
-        attachment.add_header('Content-Disposition',
-                              'attachment', filename=filename)
-    return attachment

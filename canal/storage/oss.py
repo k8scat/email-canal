@@ -1,5 +1,5 @@
+import io
 import logging
-import os
 
 import oss2
 from oss2 import Bucket, SizedFileAdapter, determine_part_size
@@ -32,8 +32,12 @@ class AliyunOSS(Storage):
 
         参考：https://help.aliyun.com/document_detail/88434.html?spm=a2c4g.11186623.6.849.de955fffeknceQ
         """
-        filepath = kwargs.get("filepath", "")
         key = kwargs.get("key", "")
+        content = kwargs.get("content", None)
+        if content is None:
+            raise ValueError("content is required")
+        if not isinstance(content, bytes):
+            raise TypeError("content must be bytes")
 
         # 初始化分片。
         # 如果需要在初始化分片时设置文件存储类型，请在init_multipart_upload中设置相关headers，参考如下。
@@ -41,14 +45,14 @@ class AliyunOSS(Storage):
         # headers["x-oss-storage-class"] = "Standard"
         # upload_id = bucket.init_multipart_upload(key, headers=headers).upload_id
         upload_id = self.bucket.init_multipart_upload(key).upload_id
-        parts = []
 
-        total_size = os.path.getsize(filepath)
+        total_size = len(content)
         # determine_part_size方法用来确定分片大小。1000KB
         part_size = determine_part_size(total_size, preferred_size=self.preferred_size)
 
         # 逐个上传分片。
-        with open(filepath, "rb") as f:
+        parts = []
+        with io.BytesIO(content) as f:
             part_number = 1
             offset = 0
             while offset < total_size:
@@ -66,28 +70,3 @@ class AliyunOSS(Storage):
             # headers["x-oss-object-acl"] = oss2.OBJECT_ACL_PRIVATE
             # bucket.complete_multipart_upload(key, upload_id, parts, headers=headers)
             self.bucket.complete_multipart_upload(key, upload_id, parts)
-
-    def get_file(self, key: str) -> GetObjectResult:
-        """
-        获取阿里云 OSS 上的文件
-        bucket.get_object的返回值是一个类文件对象（File-Like Object）
-
-        参考：https://help.aliyun.com/document_detail/88441.html?spm=a2c4g.11186623.6.854.252f6beeASG3vx
-        """
-        return self.bucket.get_object(key)
-
-    def file_exists(self, key: str) -> bool:
-        """
-        判断文件是否存在
-
-        参考：https://help.aliyun.com/document_detail/88454.html?spm=a2c4g.11186623.6.861.321b3557YkGK3S
-        """
-        return self.bucket.object_exists(key)
-
-    def sign_url(self, key: str, expire: int = 3600) -> str:
-        """
-        获取文件临时下载链接，使用签名URL进行临时授权
-
-        参考: https://help.aliyun.com/document_detail/32033.html?spm=a2c4g.11186623.6.881.603f16950kd10U
-        """
-        return self.bucket.sign_url("GET", key, expire)

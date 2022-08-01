@@ -1,11 +1,15 @@
 import logging
 import os
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(ROOT_DIR, "data")
-LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+DATA_DIR = "/email-canal/data"
+if not os.path.isdir(DATA_DIR):
+    os.makedirs(DATA_DIR, exist_ok=True)
 
-KAFKA_BROKER = "localhost:9092"
+LOGS_DIR = "/email-canal/logs"
+if not os.path.isdir(LOGS_DIR):
+    os.makedirs(LOGS_DIR, exist_ok=True)
+
+KAFKA_BROKER = "kafka:9092"
 KAFKA_TOPIC = "email"
 
 # POP3
@@ -26,6 +30,7 @@ ALIYUN_OSS_ACCESS_KEY_SECRET = ""
 ALIYUN_OSS_ENDPOINT = ""
 ALIYUN_OSS_BUCKET_NAME = ""
 
+ENABLE_LOCAL_STORAGE = True
 ATTACHMENTS_DIR = os.path.join(DATA_DIR, "attachments")
 if not os.path.isdir(ATTACHMENTS_DIR):
     os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
