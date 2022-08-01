@@ -3,7 +3,7 @@ import logging
 
 import oss2
 from oss2 import Bucket, SizedFileAdapter, determine_part_size
-from oss2.models import PartInfo, GetObjectResult
+from oss2.models import PartInfo
 
 from canal.storage.storage import Storage
 

@@ -6,7 +6,7 @@ import uuid
 from email.header import decode_header
 from email.message import Message
 from email.parser import Parser
-from email.utils import parseaddr, parsedate
+from email.utils import parseaddr
 from typing import Tuple, List
 
 from canal.storage.local import LocalStorage
