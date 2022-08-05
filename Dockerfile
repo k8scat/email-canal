@@ -1,4 +1,4 @@
-FROM python:3.10.4-alpine
+FROM python:3.10.5-alpine
 LABEL maintainer="K8sCat <k8scat@gmail.com>"
 LABEL homepage="https://github.com/k8scat/email-canal"
 ENV TZ=Asia/Shanghai \
