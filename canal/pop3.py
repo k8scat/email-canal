@@ -47,18 +47,21 @@ class POP3:
         self.user = user
         self.password = password
         self.debug_level = debug_level
+        self.enable_ssl = enable_ssl
+        self.storages = storages
+
         if self.port is None:
-            if enable_ssl:
+            if self.enable_ssl:
                 self.port = poplib.POP3_PORT
             else:
                 self.port = poplib.POP3_SSL_PORT
 
-        if enable_ssl:
+        if self.enable_ssl:
             self.client = poplib.POP3_SSL(host=self.host, port=self.port)
         else:
             self.client = poplib.POP3(host=self.host, port=self.port)
         self.client.set_debuglevel(self.debug_level)
-        self.storages = storages
+        self.login()
 
     def login(self, retry: int = 3, interval: int = 3):
         self.client.user(self.user)
@@ -73,6 +76,14 @@ class POP3:
                     raise Exception(f'POP3 login failed: {e}')
                 log.warning(f'POP3 login failed: {e}')
                 time.sleep(interval)
+
+    def reset(self):
+        if self.enable_ssl:
+            self.client = poplib.POP3_SSL(host=self.host, port=self.port)
+        else:
+            self.client = poplib.POP3(host=self.host, port=self.port)
+        self.client.set_debuglevel(self.debug_level)
+        self.login()
 
     def quit(self):
         self.client.quit()

@@ -1,4 +1,5 @@
 import json
+import poplib
 import sys
 import time
 import traceback
@@ -25,7 +26,7 @@ def main():
     pop3 = POP3(host=POP3_HOST, user=POP3_USER, password=POP3_PASSWORD,
                 port=POP3_PORT, enable_ssl=POP3_ENABLE_SSL, debug_level=POP3_DEBUG_LEVEL,
                 storages=storages)
-    pop3.login()
+    pop3_has_reset = False
 
     count = pop3.count()
     log.info(f"Email count: {count}")
@@ -44,6 +45,9 @@ def main():
                 if m is None:
                     log.error(f"Retrieve email failed, index: {email_index}")
                     break
+
+                if pop3_has_reset:
+                    pop3_has_reset = False
                 try:
                     msg = json.dumps(m).encode()
                 except Exception as e:
@@ -53,6 +57,11 @@ def main():
                 producer.send(msg)
                 email_index += 1
             except Exception as e:
+                if isinstance(e, poplib.error_proto) and not pop3_has_reset:
+                    pop3.reset()
+                    pop3_has_reset = True
+                    continue
+
                 if POP3.is_not_found(e):
                     log.info(f"Email not exists, index: {email_index}, sleep {POP3_RETR_INTERVAL} seconds...")
                     time.sleep(POP3_RETR_INTERVAL)
