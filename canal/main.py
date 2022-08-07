@@ -66,9 +66,10 @@ def main():
                 log.error(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
                 break
     finally:
-        pop3.quit()
         with open(POP3_INDEX_FILE, "w") as f:
+            log.info(f"Write email index: {email_index}")
             f.write(str(email_index))
+        pop3.quit()
 
 
 if __name__ == "__main__":
