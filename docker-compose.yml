@@ -55,6 +55,7 @@ services:
       - redis_net
     depends_on:
       - kafka
+      - redis
     container_name: email-canal
 
 networks:

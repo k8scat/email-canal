@@ -37,6 +37,6 @@ if not os.path.isdir(ATTACHMENTS_DIR):
 LOG_LEVEL = logging.INFO
 LOG_FILE = os.path.join(LOGS_DIR, "email-canal.log")
 
-REDIS_HOST = "localhost"
+REDIS_HOST = "redis"
 REDIS_PORT = 6379
 REDIS_DB = 0
