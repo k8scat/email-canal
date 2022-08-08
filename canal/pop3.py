@@ -129,22 +129,30 @@ class POP3:
 
     def parse_email(self, msg: Message) -> dict:
         headers = []
-        subject = ""
         for k, v in msg.items():
             v = POP3.decode_header_value(v)
             headers.append((k, v))
             if k.lower() == "subject":
-                subject = v
-        log.info(f"Email subject: {subject}")
+                log.info(f"Email subject: {v}")
         email = {
             "headers": headers,
         }
 
-        payloads = POP3.get_payloads(msg)
+        raw_payloads = POP3.get_payloads(msg)
+        payloads = []
         attachments = []
-        convert_payloads = []
-        for payload in payloads:
+        for payload in raw_payloads:
             content_disposition = payload.get_content_disposition()
+            headers = []
+            for k, v in payload.items():
+                v = POP3.decode_header_value(v)
+                headers.append((k, v))
+            p = {
+                "headers": headers,
+                "payload": payload.get_payload(),
+            }
+            payloads.append(p)
+
             if content_disposition == "attachment":
                 p = payload.get_payload(decode=True)
                 if not isinstance(p, bytes):
@@ -164,20 +172,11 @@ class POP3:
                 att = self.save_attachment(filename=filename, content=p)
                 if att:
                     attachments.append(att)
-            else:
-                headers = []
-                for k, v in payload.items():
-                    v = POP3.decode_header_value(v)
-                    headers.append((k, v))
-                p = {
-                    "headers": headers,
-                    "payload": payload.get_payload(),
-                }
-                convert_payloads.append(p)
+
+        if len(payloads) > 0:
+            email["payloads"] = payloads
         if len(attachments) > 0:
             email["attachments"] = attachments
-        if len(convert_payloads) > 0:
-            email["payloads"] = convert_payloads
         return email
 
     def save_attachment(self, filename: str, content: bytes) -> dict:
@@ -194,8 +193,10 @@ class POP3:
         data["key"] = key
         for s in self.storages:
             if isinstance(s, LocalStorage):
+                logging.info(f"Saving attachment to local storage: {key}")
                 s.upload(key=key, content=content)
             elif isinstance(s, AliyunOSS):
+                logging.info(f"Saving attachment to aliyun oss: {key}")
                 s.upload(key=key, content=content)
         return data
 
