@@ -176,6 +176,7 @@ class POP3:
         if len(payloads) > 0:
             email["payloads"] = payloads
         if len(attachments) > 0:
+            logging.info("Attachments count: %d", len(attachments))
             email["attachments"] = attachments
         return email
 
