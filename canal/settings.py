@@ -18,7 +18,6 @@ POP3_PORT = 995
 POP3_USER = ""
 POP3_PASSWORD = ""
 POP3_ENABLE_SSL = True
-POP3_INDEX_FILE = os.path.join(DATA_DIR, "pop3_index.txt")
 POP3_RETR_INTERVAL = 60
 # 支持 0, 1, 2，数字越大，打印的日志越详细
 POP3_DEBUG_LEVEL = 0
