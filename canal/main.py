@@ -37,6 +37,8 @@ def main():
                 email_index = int(f.read().strip())
         except Exception as e:
             log.warning(f"Read email index failed: {e}, use default index: {email_index}")
+            with open(POP3_INDEX_FILE, "w") as f:
+                f.write(str(email_index))
 
     try:
         while True:
