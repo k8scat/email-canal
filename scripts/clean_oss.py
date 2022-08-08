@@ -24,6 +24,8 @@ def main():
         if result.status != 200:
             print(result)
             break
+
+        print(f"Cleaned objects: {keys}")
         if len(resp.object_list) < 100:
             break
 
