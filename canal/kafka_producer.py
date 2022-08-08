@@ -15,4 +15,3 @@ class Producer:
 
     def close(self):
         self.producer.close()
-

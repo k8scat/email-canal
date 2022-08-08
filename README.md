@@ -4,12 +4,9 @@
 
 ## 快速开始
 
-编辑 [canal/settings.py](./canal/settings.py) 文件，主要修改 `POP3` 的配置，其他配置保持默认即可。
+复制 [canal/settings.py](./canal/settings.py) 文件到项目根目录，主要修改 `POP3` 的配置，其他配置保持默认即可。
 
 ```bash
-# 创建容器网络
-docker network create kafka_net
-
 # 启动
 docker compose up -d
 ```

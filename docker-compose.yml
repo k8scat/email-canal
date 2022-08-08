@@ -10,7 +10,7 @@ services:
       - kafka_net
     volumes:
       - zookeeper_data:/bitnami/zookeeper/data
-    container_name: zookeeper
+    container_name: email-canal-zookeeper
 
   kafka:
     image: bitnami/kafka:2.6.0
@@ -30,7 +30,19 @@ services:
       - kafka_net
     volumes:
       - kafka_data:/bitnami/kafka/data
-    container_name: kafka
+    container_name: email-canal-kafka
+
+  redis:
+    image: bitnami/redis:6.2.7
+    ports:
+      - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - redis_net
+    volumes:
+      - redis_data:/bitnami/redis/data
+    container_name: email-canal-redis
 
   email-canal:
     image: k8scat/email-canal:latest
@@ -40,14 +52,16 @@ services:
       - ./logs:/email-canal/logs
     networks:
       - kafka_net
+      - redis_net
     depends_on:
       - kafka
     container_name: email-canal
 
 networks:
   kafka_net:
-    external: true
+  redis_net:
 
 volumes:
   kafka_data:
   zookeeper_data:
+  redis_data:

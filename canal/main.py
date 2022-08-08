@@ -1,14 +1,16 @@
 import json
 import poplib
-import sys
-import time
 import traceback
 
+import sys
+import time
+
+from canal.index_manager import RedisIndexManager
+from canal.kafka_producer import Producer
+from canal.pop3 import POP3
 from canal.storage.local import LocalStorage
-from kafka_producer import Producer
-from pop3 import POP3
-from settings import *
 from canal.storage.oss import AliyunOSS
+from settings import *
 
 handlers = [
     logging.StreamHandler(stream=sys.stdout),
@@ -28,17 +30,11 @@ def main():
                 storages=storages)
     pop3_has_reset = False
 
-    count = pop3.count()
-    log.info(f"Email count: {count}")
-    email_index = 1
-    if os.path.isfile(POP3_INDEX_FILE):
-        try:
-            with open(POP3_INDEX_FILE) as f:
-                email_index = int(f.read().strip())
-        except Exception as e:
-            log.warning(f"Read email index failed: {e}, use default index: {email_index}")
-            with open(POP3_INDEX_FILE, "w") as f:
-                f.write(str(email_index))
+    try:
+        email_index = pop3_index_manager.get()
+    except Exception as e:
+        log.error(f"Get email index failed: {e}")
+        return
 
     try:
         while True:
@@ -58,6 +54,7 @@ def main():
 
                 producer.send(msg)
                 email_index += 1
+                pop3_index_manager.put(email_index)
             except Exception as e:
                 if isinstance(e, poplib.error_proto) and not pop3_has_reset:
                     pop3.reset()
@@ -77,9 +74,6 @@ def main():
                 log.error(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
                 break
     finally:
-        with open(POP3_INDEX_FILE, "w") as f:
-            log.info(f"Write email index: {email_index}")
-            f.write(str(email_index))
         pop3.quit()
 
 
@@ -93,8 +87,10 @@ if __name__ == "__main__":
         storages.append(oss)
 
     producer = Producer(broker=KAFKA_BROKER, topic=KAFKA_TOPIC)
+    pop3_index_manager = RedisIndexManager(index_key="pop3_index", host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+
     try:
-        while True:
-            main()
+        main()
     finally:
         producer.close()
+        pop3_index_manager.close()
