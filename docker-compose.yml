@@ -42,7 +42,6 @@ services:
       - kafka_net
     depends_on:
       - kafka
-    restart: on-failure
     container_name: email-canal
 
 networks:
