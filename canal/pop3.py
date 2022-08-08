@@ -151,10 +151,16 @@ class POP3:
                     logging.warning(f"Payload is not bytes: {type(p)}")
                     continue
 
-                filename = POP3.decode_header_value(payload.get_filename())
+                filename = payload.get_filename()
                 if not filename:
-                    logging.warning("Empty filename")
+                    logging.warning(f"Filename not found in attachment payload")
                     continue
+                logging.info(f"Raw filename: {filename}")
+                filename = POP3.decode_header_value(filename)
+                if not filename:
+                    logging.warning(f"Decoded filename is empty")
+                    continue
+                logging.info(f"Decoded filename: {filename}")
                 att = self.save_attachment(filename=filename, content=p)
                 if att:
                     attachments.append(att)
