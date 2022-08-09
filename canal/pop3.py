@@ -256,7 +256,6 @@ class POP3:
         result = []
         for part, charset in decode_header(value):
             s = part
-            log.info(f"Value part: {part}")
             if isinstance(part, bytes):
                 charsets = []
                 if charset:
@@ -273,7 +272,7 @@ class POP3:
                         decode_ok = True
                         break
                     except Exception as e:
-                        log.warning(f"Decode header value with {encoding} failed: {e}")
+                        log.warning(f"Decode header value with {encoding} failed: {e}, part: {part}")
 
                 if not decode_ok:
                     encoding = charsets[0]
