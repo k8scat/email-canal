@@ -11,6 +11,7 @@ if not os.path.isdir(LOGS_DIR):
 
 KAFKA_BROKER = "kafka:9092"
 KAFKA_TOPIC = "email"
+KAFKA_PRODUCER_MAX_REQUEST_SIZE = 104857600
 
 # POP3
 POP3_HOST = ""

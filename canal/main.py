@@ -86,7 +86,8 @@ if __name__ == "__main__":
                         ALIYUN_OSS_ENDPOINT, ALIYUN_OSS_BUCKET_NAME)
         storages.append(oss)
 
-    producer = Producer(broker=KAFKA_BROKER, topic=KAFKA_TOPIC)
+    producer = Producer(broker=KAFKA_BROKER, topic=KAFKA_TOPIC,
+                        max_request_size=KAFKA_PRODUCER_MAX_REQUEST_SIZE)
     pop3_index_manager = RedisIndexManager(index_key="pop3_index", host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
 
     try:
