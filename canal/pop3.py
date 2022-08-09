@@ -256,13 +256,14 @@ class POP3:
         result = []
         for part, charset in decode_header(value):
             s = part
+            log.info(f"Value part: {part}")
             if isinstance(part, bytes):
                 charsets = []
                 if charset:
                     charsets.append(charset)
-                if charset not in ['utf-8', 'utf8']:
-                    charsets.append('utf-8')
-                charsets.append('gbk')
+                if charset not in ["utf-8", "utf8"]:
+                    charsets.append("utf-8")
+                charsets.append("gbk")
 
                 decode_ok = False
                 for encoding in charsets:
@@ -271,8 +272,8 @@ class POP3:
                         s = part.decode(encoding)
                         decode_ok = True
                         break
-                    except UnicodeDecodeError:
-                        log.warning(f"Decode header value with {encoding} failed: {part}")
+                    except Exception as e:
+                        log.warning(f"Decode header value with {encoding} failed: {e}")
 
                 if not decode_ok:
                     encoding = charsets[0]
@@ -280,7 +281,7 @@ class POP3:
                     s = part.decode(encoding, errors="ignore")
 
             result.append(s)
-        return u''.join(result)
+        return u"".join(result)
 
     @staticmethod
     def is_not_found(e: Exception) -> bool:
