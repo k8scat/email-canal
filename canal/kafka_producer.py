@@ -11,7 +11,9 @@ class Producer:
         self.producer = KafkaProducer(bootstrap_servers=self.broker)
 
     def send(self, message: bytes):
-        self.producer.send(self.topic, message)
+        res = self.producer.send(self.topic, message)
+        if res.failed():
+            raise Exception(f"Send message failed: {res.exception}")
 
     def close(self):
         self.producer.close()
