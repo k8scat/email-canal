@@ -56,7 +56,7 @@ def main():
                 email_index += 1
                 pop3_index_manager.put(email_index)
             except Exception as e:
-                if isinstance(e, poplib.error_proto) and not pop3_has_reset:
+                if isinstance(e, poplib.error_proto):
                     if POP3.is_not_found(e):
                         log.info(f"Email not exists, index: {email_index}, sleep {POP3_RETR_INTERVAL} seconds...")
                         time.sleep(POP3_RETR_INTERVAL)
@@ -67,9 +67,10 @@ def main():
                         email_index += 1
                         continue
 
-                    pop3.reset()
-                    pop3_has_reset = True
-                    continue
+                    if not pop3_has_reset:
+                        pop3.reset()
+                        pop3_has_reset = True
+                        continue
 
                 log.error(f"Process failed: {e}, index: {email_index}, traceback:\n{traceback.format_exc()}")
                 break
