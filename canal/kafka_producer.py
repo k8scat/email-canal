@@ -2,6 +2,9 @@ from kafka import KafkaProducer
 
 
 class Producer:
+    batch_size = 0  # 禁用批处理
+    compression_type = "lz4"
+
     def __init__(self, **kwargs):
         self.broker = kwargs.get("broker", None)
         self.topic = kwargs.get("topic", None)
@@ -10,7 +13,9 @@ class Producer:
             raise Exception(f"Invalid producer args: {kwargs}")
 
         self.producer = KafkaProducer(bootstrap_servers=self.broker,
-                                      max_request_size=self.max_request_size)
+                                      max_request_size=self.max_request_size,
+                                      compression_type=self.compression_type,
+                                      batch_size=self.batch_size)
 
     def send(self, message: bytes):
         res = self.producer.send(self.topic, message)

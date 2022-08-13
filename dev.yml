@@ -19,7 +19,7 @@ services:
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_LISTENERS=INTERNAL://:9093,CLIENT://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://127.0.0.1:9093,CLIENT://kafka:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://127.0.0.1:9093,CLIENT://localhost:9092
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
@@ -39,29 +39,12 @@ services:
       - "6379:6379"
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
-    networks:
-      - redis_net
     volumes:
       - redis_data:/bitnami/redis/data
     container_name: email-canal-redis
 
-  email-canal:
-    image: k8scat/email-canal:latest
-    volumes:
-      - ./data:/email-canal/data
-      - ./settings.py:/opt/email-canal/canal/settings.py
-      - ./logs:/email-canal/logs
-    networks:
-      - kafka_net
-      - redis_net
-    depends_on:
-      - kafka
-      - redis
-    container_name: email-canal
-
 networks:
   kafka_net:
-  redis_net:
 
 volumes:
   kafka_data:
