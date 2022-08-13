@@ -1,6 +1,8 @@
 # email-canal
 
-通过 POP3 协议同步邮件到 Kafka，支持附件本地或 OSS 存储。
+基于 Kafka 的邮件流式处理工具。
+
+![](./docs/email-canal.png)
 
 ## 快速开始
 
@@ -10,10 +12,6 @@
 # 启动
 docker compose up -d
 ```
-
-## Author
-
-[K8sCat](https://github.com/k8scat)
 
 ## License
 
