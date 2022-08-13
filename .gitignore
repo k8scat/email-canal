@@ -4,3 +4,4 @@ settings_*.py
 .idea
 data
 logs
+.vscode
