@@ -5,3 +5,4 @@ settings_*.py
 data
 logs
 .vscode
+.DS_Store
