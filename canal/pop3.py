@@ -7,7 +7,7 @@ from email.header import decode_header
 from email.message import Message
 from email.parser import Parser
 from email.utils import parseaddr
-from typing import Tuple, List
+from typing import Tuple
 
 from canal.storage.local import LocalStorage
 from canal.storage.oss import AliyunOSS
@@ -15,23 +15,6 @@ from canal.storage.storage import Storage
 from canal.utils import sha256
 
 log = logging.getLogger(__name__)
-
-
-class Email:
-    def __init__(self, subject: str, from_addr: Tuple[str, str], to_addr: Tuple[str, str],
-                 plain_content: str = "", html_content: str = "", attachments: List[dict] | None = None,
-                 size: int | None = None, raw: bytes | None = None, index: int | None = None,
-                 date: float | None = None):
-        self.subject = subject
-        self.from_addr = from_addr
-        self.to_addr = to_addr
-        self.plain_content = plain_content
-        self.html_content = html_content
-        self.attachments = attachments
-        self.size = size
-        self.raw = raw
-        self.index = index
-        self.date = date
 
 
 class POP3:
